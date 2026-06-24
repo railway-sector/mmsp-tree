@@ -15,10 +15,12 @@ import {
 } from "../layers";
 import type { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 import type { ArcgisSearch } from "@arcgis/map-components/components/arcgis-search/customElement";
+import { useState } from "react";
 
 function MapDisplay() {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const arcgisSearch = document.querySelector("arcgis-search") as ArcgisSearch;
+  const [_mapView, setMapView] = useState<any>();
 
   arcgisMap?.viewOnReady(() => {
     arcgisMap?.map?.add(alignmentGroupLayer);
@@ -50,6 +52,9 @@ function MapDisplay() {
       basemap="dark-gray-vector"
       zoom={14}
       center="121.0194387, 14.6972616"
+      onarcgisViewReadyChange={(event: any) => {
+        setMapView(event.target.id);
+      }}
     >
       <arcgis-expand close-on-esc slot="top-right" mode="floating">
         <arcgis-search></arcgis-search>

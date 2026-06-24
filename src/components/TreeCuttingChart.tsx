@@ -1,19 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { queryc, treeCuttingLayer } from "../layers";
-import * as am5 from "@amcharts/amcharts5";
-import * as am5percent from "@amcharts/amcharts5/percent";
-import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
-import am5themes_Responsive from "@amcharts/amcharts5/themes/Responsive";
 import { thousands_separators, zoomToLayer } from "../Query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
-import { MyContext } from "../contexts/MyContext";
 import {
   colorsCutting,
-  cpField,
-  stationField,
   primaryLabelColor,
   treeCuttingTypes,
   treeCuttinStatusField,
@@ -22,57 +15,67 @@ import {
 import { queryDefinitionExpression } from "../QueryExpression";
 import { pieChartStatusData } from "../ChartGenerator";
 import { chartRenderer } from "../ChartRenderer";
+import {
+  chartSetter,
+  legendSetter,
+  rootSetter,
+  seriesSetter,
+} from "../chartSetter";
+import { useQuery } from "@tanstack/react-query";
+import {
+  locationKeys,
+  type ChartResponse,
+  type SelectedLocation,
+} from "../interfaceKeys";
 
-// Dispose function
-function maybeDisposeRoot(divId: any) {
-  am5.array.each(am5.registry.rootElements, function (root) {
-    if (root.dom.id === divId) {
-      root.dispose();
-    }
-  });
-}
-
-///*** Others */
-/// Draw chart
 const TreeCuttingChart = () => {
   const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
-  const { contractpackages, stations, updateChartPanelwidth, chartPanelwidth } =
-    use(MyContext);
+  const [chartPanelwidth, setChartPanelwidth] = useState<any>();
+
+  //--- 1. Location state
+  const { data: selectedLocation } = useQuery<SelectedLocation | any>({
+    queryKey: locationKeys.selected,
+    queryFn: async () => ({}),
+    staleTime: Infinity,
+  });
+  const cpackage = selectedLocation?.cpackage;
+  const station = selectedLocation?.station;
+
+  const { data } = useQuery<ChartResponse | any>({
+    queryKey: [cpackage, station, treeCuttinStatusField, treeCuttingLayer],
+    queryFn: async () => {
+      queryc.qValues = [cpackage === "All" ? undefined : cpackage, station];
+
+      queryDefinitionExpression({
+        queryExpression: queryc.queryExpression(),
+        featureLayer: [treeCuttingLayer],
+      });
+
+      const chartData = await pieChartStatusData({
+        qChart: queryc.queryExpression(),
+        layer: treeCuttingLayer,
+        statusList: treeCuttingTypes,
+        statusColor: colorsCutting,
+        statusField: treeCuttinStatusField,
+        statisticField: treeCuttinStatusField,
+        statisticType: "count",
+      });
+
+      zoomToLayer(treeCuttingLayer, arcgisMap?.view);
+
+      return {
+        chartData: chartData[0] || [],
+        totaln: chartData[1] || 0,
+      };
+    },
+  });
+  const chartData = data?.chartData || [];
+  const totaln = data?.totaln || 0;
+
   const pieSeriesRef = useRef<unknown | any | undefined>({});
   const legendRef = useRef<unknown | any | undefined>({});
   const chartRef = useRef<unknown | any | undefined>({});
-  const [treesData, setTreesData] = useState<any>([]);
-  const [treesNumber, setTreesNumber] = useState<any>(0);
-
-  const chartID = "pie-cut";
-
-  useEffect(() => {
-    queryc.qValues = [
-      contractpackages === "All" ? undefined : contractpackages,
-      stations,
-    ];
-    queryc.qFields = [cpField, stationField];
-
-    queryDefinitionExpression({
-      queryExpression: queryc.queryExpression(),
-      featureLayer: [treeCuttingLayer],
-    });
-
-    pieChartStatusData({
-      qChart: queryc.queryExpression(),
-      layer: treeCuttingLayer,
-      statusList: treeCuttingTypes,
-      statusColor: colorsCutting,
-      statusField: treeCuttinStatusField,
-      statisticField: treeCuttinStatusField,
-      statisticType: "count",
-    }).then((result: any) => {
-      setTreesData(result[0]);
-      setTreesNumber(result[1]);
-    });
-
-    zoomToLayer(treeCuttingLayer, arcgisMap?.view);
-  }, [contractpackages, stations]);
+  const chartID = "tree-cut";
 
   const new_fontSize = chartPanelwidth / 22.3;
   const new_valueSize = new_fontSize * 1.55;
@@ -82,51 +85,31 @@ const TreeCuttingChart = () => {
   const new_pieInnerLabelFontSize = "0.45em";
 
   useEffect(() => {
-    maybeDisposeRoot(chartID);
-
-    const root = am5.Root.new(chartID);
-    root.container.children.clear();
-    root._logo?.dispose();
-
-    // Set themesf
-    root.setThemes([
-      am5themes_Animated.new(root),
-      am5themes_Responsive.new(root),
-    ]);
-
-    // Create chart
-    const chart = root.container.children.push(
-      am5percent.PieChart.new(root, {
-        centerY: am5.percent(25), //-10
-        y: am5.percent(0), // space between pie chart and total lots
-        layout: root.verticalLayout,
-      }),
-    );
+    const root = rootSetter({ chartID: chartID });
+    const chart = chartSetter({ root: root });
     chartRef.current = chart;
 
-    // Create series
-    const pieSeries = chart.series.push(
-      am5percent.PieSeries.new(root, {
-        name: "Series",
-        categoryField: "category",
-        valueField: "value",
-        legendValueText: "{valuePercentTotal.formatNumber('#.')}% ({value})",
-        radius: am5.percent(25), // outer radius
-        innerRadius: am5.percent(15),
-        // scale: 0.5,
-      }),
-    );
+    const pieSeries = seriesSetter({
+      chart: chart,
+      root: root,
+      categoryField: "category",
+      valueField: "value",
+      legendValueText: "{valuePercentTotal.formatNumber('#.')}% ({value})",
+      radius: 35,
+      innerRadius: 20,
+      scale: 1,
+    });
     pieSeriesRef.current = pieSeries;
     chart.series.push(pieSeries);
 
-    const legend = root.container.children.push(
-      am5.Legend.new(root, {
-        centerX: am5.percent(50),
-        x: am5.percent(50),
-        y: am5.percent(65),
-        // scale: 1.03,
-      }),
-    );
+    const legend = legendSetter({
+      chart: chart,
+      root: root,
+      centerX: 50,
+      x: 50,
+      y: 65,
+      // scale: 1.03,
+    });
     legendRef.current = legend;
     legend.data.setAll(pieSeries.dataItems);
 
@@ -136,14 +119,11 @@ const TreeCuttingChart = () => {
       pieSeries: pieSeries,
       legend: legend,
       root: root,
-      q1Value: contractpackages === "All" ? undefined : contractpackages,
-      q2Value: stations,
-      q1Field: cpField,
-      q2Field: stationField,
+      qChart: queryc,
       status_field: treeCuttinStatusField,
       arcgisScene: arcgisMap,
-      updateChartPanelwidth: updateChartPanelwidth,
-      data: treesData,
+      updateChartPanelwidth: setChartPanelwidth,
+      data: chartData,
       pieSeriesScale: new_pieSeriesScale,
       pieInnerLabel: undefined,
       pieInnerLabelFontSize: new_pieInnerLabelFontSize,
@@ -157,10 +137,10 @@ const TreeCuttingChart = () => {
     return () => {
       root.dispose();
     };
-  }, [chartID, treesData]);
+  }, [chartID, chartData]);
 
   useEffect(() => {
-    pieSeriesRef.current?.data.setAll(treesData);
+    pieSeriesRef.current?.data.setAll(chartData);
     legendRef.current?.data.setAll(pieSeriesRef.current.dataItems);
   });
 
@@ -203,7 +183,7 @@ const TreeCuttingChart = () => {
               margin: "auto",
             }}
           >
-            {thousands_separators(treesNumber)}
+            {thousands_separators(totaln)}
           </dd>
         </dl>
       </div>

@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
 import { DropdownData } from "./DropdownContext";
 import { dateUpdate } from "../Query";
 import { primaryLabelColor } from "../uniqueValues";
+import { dateDisplayKeys } from "../interfaceKeys";
+import { useQuery } from "@tanstack/react-query";
+import type { DisplayDates } from "../interfaceKeys";
 
 function Header() {
-  const [asOfDate, setAsOfDate] = useState(null);
-  useEffect(() => {
-    dateUpdate().then((response) => {
-      setAsOfDate(response);
-    });
-  }, []);
+  const { data } = useQuery<DisplayDates | any>({
+    queryKey: [dateDisplayKeys.selected],
+    queryFn: () => dateUpdate(),
+    select: (response) => {
+      return { asOfDate: response };
+    },
+    staleTime: Infinity,
+  });
+  const asOfDate = data?.asOfDate || "";
 
   return (
     <>

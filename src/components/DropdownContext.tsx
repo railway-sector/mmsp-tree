@@ -1,41 +1,55 @@
-import { useEffect, useState, use } from "react";
+import { useState } from "react";
 import Select from "react-select";
 import "../index.css";
 import { treeCuttingLayer } from "../layers";
 import { primaryLabelColor } from "../uniqueValues";
-import { MyContext } from "../contexts/MyContext";
 import GenerateDropdownData from "npm-dropdown-package";
+import { locationKeys } from "../interfaceKeys";
+import type { SelectedLocation } from "../interfaceKeys";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function DropdownData() {
-  const { updateContractPackage, updateStations } = use(MyContext);
+  const queryClient = useQueryClient();
 
-  // For dropdown filter
-  const [initContractPacakge, setInitContractPacakge] = useState<any>([]);
-  const [contractPackage, setContractPackage] = useState<any>(null);
-  const [station, setStation] = useState<any>(null);
-  const [stationList, setStationList] = useState([]);
+  const [cpackageSelected, setCpackageSelected] = useState<null | any>(null);
+  const [stationSelected, setStationSelected] = useState<null | any>(null);
+  const [stationList, setStationList] = useState<any>([]);
 
-  useEffect(() => {
-    const dropdownData = new GenerateDropdownData(
-      [treeCuttingLayer],
-      ["Package", "Station1"],
-    );
+  const { data: cpackageList } = useQuery<any>({
+    queryKey: ["dropdownData"], // Do not add lotLayer as a dependency. The dropdown list will not be updated properly.
+    queryFn: async () => {
+      const dropdownData = new GenerateDropdownData(
+        [treeCuttingLayer],
+        ["Package", "Station1"],
+      );
+      return await dropdownData.dropDownQuery();
+    },
+    staleTime: Infinity, // never refetch in the backround. If not Inifity, it will refetch.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
-    dropdownData.dropDownQuery().then((response: any) => {
-      setInitContractPacakge(response);
+  function updateDropdownListValues(
+    cp_obj_field: SelectedLocation["cpackage"],
+    station_obj_field: SelectedLocation["station"],
+  ) {
+    return queryClient.setQueryData<SelectedLocation>(locationKeys.selected, {
+      cpackage: cp_obj_field,
+      station: station_obj_field,
     });
-  }, []);
+  }
 
   const handleContractPackageChange = (obj: any) => {
-    setContractPackage(obj);
+    updateDropdownListValues(obj.field1, undefined);
+    setCpackageSelected(obj);
     setStationList(obj.field2);
-    setStation(null);
-    updateContractPackage(obj.field1);
+    setStationSelected(null);
   };
 
   const handleStationChange = (obj: any) => {
-    setStation(obj);
-    updateStations(obj.name);
+    updateDropdownListValues(cpackageSelected?.field1, obj.name);
+    setStationSelected(obj);
   };
 
   // Style CSS
@@ -88,8 +102,8 @@ export function DropdownData() {
       </b>
       <Select
         placeholder="Select CP"
-        value={contractPackage}
-        options={initContractPacakge}
+        value={cpackageSelected}
+        options={cpackageList && cpackageList}
         onChange={handleContractPackageChange}
         getOptionLabel={(x: any) => x.field1}
         styles={customstyles}
@@ -109,8 +123,8 @@ export function DropdownData() {
       </b>
       <Select
         placeholder="Select Station"
-        value={station}
-        options={stationList}
+        value={stationSelected}
+        options={stationList && stationList}
         onChange={handleStationChange}
         getOptionLabel={(x: any) => x.name}
         styles={customstyles}

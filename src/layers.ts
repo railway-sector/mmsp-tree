@@ -10,6 +10,8 @@ import QueryExpressionLayers from "query-layers-expression";
 import {
   colorsCompen,
   colorsCutting,
+  cpField,
+  stationField,
   treeCompensationStatusLabels,
   treeCompensationStatusValues,
   treeCuttingStatusLabels,
@@ -19,7 +21,7 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 
 export const queryc = new QueryExpressionLayers(
   undefined,
-  undefined,
+  [cpField, stationField],
   undefined,
   undefined,
   "string",
@@ -31,7 +33,7 @@ export const queryc = new QueryExpressionLayers(
 
 export const queryc2 = new QueryExpressionLayers(
   undefined,
-  undefined,
+  [cpField, stationField],
   undefined,
   undefined,
   "string",
@@ -43,7 +45,7 @@ export const queryc2 = new QueryExpressionLayers(
 
 export const queryc3 = new QueryExpressionLayers(
   undefined,
-  undefined,
+  [cpField, stationField],
   undefined,
   undefined,
   "string",
@@ -55,7 +57,7 @@ export const queryc3 = new QueryExpressionLayers(
 
 export const queryc4 = new QueryExpressionLayers(
   undefined,
-  undefined,
+  [cpField, stationField],
   undefined,
   undefined,
   "string",
