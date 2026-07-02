@@ -18,9 +18,28 @@ import {
   treeCuttingStatusValues,
 } from "./uniqueValues";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
+import ChartPieSeries from "chart-pie-series";
+
+export const piechart_cut = new ChartPieSeries(
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+);
+
+export const piechart_comp = new ChartPieSeries(
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+);
 
 export const queryc = new QueryExpressionLayers(
-  undefined,
+  [undefined],
   [cpField, stationField],
   undefined,
   undefined,
@@ -32,7 +51,7 @@ export const queryc = new QueryExpressionLayers(
 );
 
 export const queryc2 = new QueryExpressionLayers(
-  undefined,
+  [undefined],
   [cpField, stationField],
   undefined,
   undefined,
@@ -44,7 +63,7 @@ export const queryc2 = new QueryExpressionLayers(
 );
 
 export const queryc3 = new QueryExpressionLayers(
-  undefined,
+  [undefined],
   [cpField, stationField],
   undefined,
   undefined,

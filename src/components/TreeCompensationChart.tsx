@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { useEffect, useRef, useState } from "react";
-import { queryc3, treeCompensationLayer } from "../layers";
-import { thousands_separators, zoomToLayer } from "../Query";
+import { piechart_comp, queryc3, treeCompensationLayer } from "../layers";
+import { pieChartData, thousands_separators, zoomToLayer } from "../Query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
@@ -10,10 +10,8 @@ import {
   treeCompensationTypes,
   treeCompensationStatusField,
   valueLabelColor,
-  colorsCompen,
 } from "../uniqueValues";
 import { queryDefinitionExpression } from "../QueryExpression";
-import { pieChartStatusData } from "../ChartGenerator";
 import { chartRenderer } from "../ChartRenderer";
 import {
   chartSetter,
@@ -56,11 +54,11 @@ const TreeCompensationChart = () => {
         featureLayer: [treeCompensationLayer],
       });
 
-      const chartData = await pieChartStatusData({
-        qChart: queryc3.queryExpression(),
+      const chartData = await pieChartData({
+        piechart: piechart_comp,
+        qChart: queryc3,
         layer: treeCompensationLayer,
         statusList: treeCompensationTypes,
-        statusColor: colorsCompen,
         statusField: treeCompensationStatusField,
         statisticField: treeCompensationStatusField,
         statisticType: "count",
@@ -73,6 +71,9 @@ const TreeCompensationChart = () => {
         totaln: chartData[1] || 0,
       };
     },
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const chartData = data?.chartData || [];
   const totaln = data?.totaln || 0;

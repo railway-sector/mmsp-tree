@@ -76,6 +76,7 @@ export const treeCompensationTypes = treeCompensationStatusLabels.map(
     return Object.assign({
       category: label,
       value: treeCompensationStatusValues[index],
+      color: colorsCompen[index],
     });
   },
 );

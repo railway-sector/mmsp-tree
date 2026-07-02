@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { useEffect, useRef, useState } from "react";
-import { queryc, treeCuttingLayer } from "../layers";
-import { thousands_separators, zoomToLayer } from "../Query";
+import { piechart_cut, queryc, treeCuttingLayer } from "../layers";
+import { pieChartData, thousands_separators, zoomToLayer } from "../Query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 import {
-  colorsCutting,
   primaryLabelColor,
   treeCuttingTypes,
   treeCuttinStatusField,
   valueLabelColor,
 } from "../uniqueValues";
 import { queryDefinitionExpression } from "../QueryExpression";
-import { pieChartStatusData } from "../ChartGenerator";
 import { chartRenderer } from "../ChartRenderer";
 import {
   chartSetter,
@@ -51,11 +49,11 @@ const TreeCuttingChart = () => {
         featureLayer: [treeCuttingLayer],
       });
 
-      const chartData = await pieChartStatusData({
-        qChart: queryc.queryExpression(),
+      const chartData = await pieChartData({
+        piechart: piechart_cut,
+        qChart: queryc,
         layer: treeCuttingLayer,
         statusList: treeCuttingTypes,
-        statusColor: colorsCutting,
         statusField: treeCuttinStatusField,
         statisticField: treeCuttinStatusField,
         statisticType: "count",
@@ -68,6 +66,9 @@ const TreeCuttingChart = () => {
         totaln: chartData[1] || 0,
       };
     },
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const chartData = data?.chartData || [];
   const totaln = data?.totaln || 0;
