@@ -9,7 +9,7 @@ import "@arcgis/map-components/components/arcgis-layer-list";
 import "@arcgis/map-components/components/arcgis-legend";
 import { defineActions } from "../uniqueValues";
 import { commemorativeTreeLayer } from "../layers";
-import { zoomToLayer, highlightTrees } from "../Query";
+import { zoomToLayer, highlightTrees } from "../query";
 import type { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 
 function ActionPanel() {

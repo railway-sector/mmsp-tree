@@ -1,5 +1,5 @@
 import { DropdownData } from "./DropdownContext";
-import { dateUpdate } from "../Query";
+import { dateUpdate } from "../query";
 import { primaryLabelColor } from "../uniqueValues";
 import { dateDisplayKeys } from "../interfaceKeys";
 import { useQuery } from "@tanstack/react-query";

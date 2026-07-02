@@ -8,7 +8,7 @@ import "@esri/calcite-components/dist/components/calcite-shell";
 import MapDisplay from "./components/MapDisplay";
 import ActionPanel from "./components/ActionPanel";
 import Header from "./components/Header";
-import MainChart from "./components/MainChart";
+import MainChart from "./components/ChartMain";
 import { authenticate } from "./autho";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { useEffect, useRef, useState } from "react";
 import { piechart_cut, queryc, treeCuttingLayer } from "../layers";
-import { pieChartData, thousands_separators, zoomToLayer } from "../Query";
+import { pieChartData, thousands_separators, zoomToLayer } from "../query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
@@ -11,8 +11,8 @@ import {
   treeCuttinStatusField,
   valueLabelColor,
 } from "../uniqueValues";
-import { queryDefinitionExpression } from "../QueryExpression";
-import { chartRenderer } from "../ChartRenderer";
+import { queryDefinitionExpression } from "../queryExpression";
+import { chartRenderer } from "../chartRenderer";
 import {
   chartSetter,
   legendSetter,
@@ -26,7 +26,7 @@ import {
   type SelectedLocation,
 } from "../interfaceKeys";
 
-const TreeCuttingChart = () => {
+const ChartTreeCutting = () => {
   const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
@@ -201,4 +201,4 @@ const TreeCuttingChart = () => {
   );
 }; // End of lotChartgs
 
-export default TreeCuttingChart;
+export default ChartTreeCutting;
