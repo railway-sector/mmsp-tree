@@ -14,12 +14,14 @@
   "dependencies": {
     "@arcgis/charts-components": "^5.0.0",
     "@arcgis/core": "^5.1.8",
-    "@arcgis/map-components": "^5.0.0",
-    "@esri/calcite-components": "^5.0.0",
+    "@arcgis/map-components": "^5.1.15",
+    "@esri/calcite-components": "^5.1.1",
     "@tanstack/react-query": "^5.101.1",
-    "chart-pie-series": "^1.0.0",
+    "chart-pie-series": "^1.0.7",
+    "chart-pie-series-render": "^1.0.8",
+    "dropdown-pkg-arcgis": "^1.1.1",
     "npm-dropdown-package": "^1.0.6",
-    "query-layers-expression": "^1.0.10",
+    "query-layers-expression": "^1.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-select": "^5.10.2"
@@ -28,7 +30,7 @@
     "@types/node": "~24.10.1",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.2",
-    "@vitejs/plugin-react-swc": "^4.3.1",
+    "@vitejs/plugin-react-swc": "^4.3.3",
     "gh-pages": "^6.3.0",
     "typescript": "~5.9.3",
     "vite": "^7.2.2"

@@ -1,18 +1,25 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { useEffect, useRef, useState } from "react";
-import { piechart_comp, queryc3, treeCompensationLayer } from "../layers";
-import { pieChartData, thousands_separators, zoomToLayer } from "../query";
+import { use, useEffect, useRef, useState } from "react";
+import { treeCompensationLayer } from "../layers";
+import {
+  makeQuery,
+  pieChartData,
+  PieChartRender,
+  thousands_separators,
+  zoomToLayer,
+} from "../query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 import {
-  primaryLabelColor,
-  treeCompensationTypes,
-  treeCompensationStatusField,
-  valueLabelColor,
+  labelColor,
+  valueColor,
+  cp_f,
+  station_f,
+  treem_status_q,
+  treem_status_f,
 } from "../uniqueValues";
 import { queryDefinitionExpression } from "../queryExpression";
-import { chartRenderer } from "../chartRenderer";
 import {
   chartSetter,
   legendSetter,
@@ -20,47 +27,35 @@ import {
   seriesSetter,
 } from "../chartSetter";
 import { useQuery } from "@tanstack/react-query";
-import {
-  locationKeys,
-  type ChartResponse,
-  type SelectedLocation,
-} from "../interfaceKeys";
+import { type ChartResponse } from "../interfaceKeys";
+import { MyContext } from "../contexts/MyContext";
+import ChartPieSeries from "chart-pie-series";
+import ChartPieSeriesRender from "chart-pie-series-render";
 
 const ChartTreeCompensation = () => {
+  const { cpackage, station } = use(MyContext);
   const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
-  //--- 1. Location state
-  const { data: selectedLocation } = useQuery<SelectedLocation | any>({
-    queryKey: locationKeys.selected,
-    queryFn: async () => ({}),
-    staleTime: Infinity,
-  });
-  const cpackage = selectedLocation?.cpackage;
-  const station = selectedLocation?.station;
+  //--- Common qValues and qFields for QueryExpressionLayers class
+  const qV = [cpackage === "All" ? undefined : cpackage, station];
+  const queryc3 = makeQuery(qV, [cp_f, station_f]);
 
-  const { data } = useQuery<ChartResponse | any>({
-    queryKey: [
-      cpackage,
-      station,
-      treeCompensationStatusField,
-      treeCompensationLayer,
-    ],
+  const { data, isLoading } = useQuery<ChartResponse | any>({
+    queryKey: [cpackage, station, treem_status_f, treeCompensationLayer],
     queryFn: async () => {
-      queryc3.qValues = [cpackage === "All" ? undefined : cpackage];
-
       queryDefinitionExpression({
         queryExpression: queryc3.queryExpression(),
         featureLayer: [treeCompensationLayer],
       });
 
       const chartData = await pieChartData({
-        piechart: piechart_comp,
+        piechart: new ChartPieSeries(),
         qChart: queryc3,
         layer: treeCompensationLayer,
-        statusList: treeCompensationTypes,
-        statusField: treeCompensationStatusField,
-        statisticField: treeCompensationStatusField,
+        statusList: treem_status_q,
+        statusField: treem_status_f,
+        statisticField: treem_status_f,
         statisticType: "count",
       });
 
@@ -85,9 +80,9 @@ const ChartTreeCompensation = () => {
 
   const new_fontSize = chartPanelwidth / 22.3;
   const new_valueSize = new_fontSize * 1.55;
-  const new_imageSize = chartPanelwidth * 0.04;
+  const new_imageSize = chartPanelwidth * 0.03;
   const new_pieSeriesScale = 220;
-  const new_pieInnerValueFontSize = "1.1rem";
+  const new_pieInnerValueFontSize = "0.7rem";
   const new_pieInnerLabelFontSize = "0.45em";
 
   useEffect(() => {
@@ -115,28 +110,31 @@ const ChartTreeCompensation = () => {
       centerX: 50,
       x: 50,
       y: 50,
-      // scale: 1.03,
     });
     legendRef.current = legend;
     legend.data.setAll(pieSeries.dataItems);
 
     // Render chart
-    chartRenderer({
-      chart: chart,
+    PieChartRender({
+      render: new ChartPieSeriesRender(),
+      chart,
       pieSeries: pieSeries,
-      legend: legend,
-      root: root,
+      legend,
+      root,
       qChart: queryc3,
-      status_field: treeCompensationStatusField,
-      arcgisScene: arcgisMap,
+      q2Expression: undefined,
+      status_field: treem_status_f,
+      view: arcgisMap?.view,
       updateChartPanelwidth: setChartPanelwidth,
       data: chartData,
-      pieSeriesScale: new_pieSeriesScale,
-      pieInnerLabel: undefined,
-      pieInnerLabelFontSize: new_pieInnerLabelFontSize,
-      pieInnerValueFontSize: new_pieInnerValueFontSize,
+      seriesScale: new_pieSeriesScale,
+      innerLabel: "TREES",
+      innerLabelFontSize: new_pieInnerLabelFontSize,
+      innerValueFontSize: new_pieInnerValueFontSize,
       layer: treeCompensationLayer,
-      statusArray: treeCompensationTypes,
+      statusArray: treem_status_q,
+      bkg_color_switch: false,
+      seriesFillHash: undefined,
     });
 
     pieSeries.appear(1000, 100);
@@ -168,12 +166,16 @@ const ChartTreeCompensation = () => {
           alt="Land Logo"
           height={`${new_imageSize}%`}
           width={`${new_imageSize}%`}
-          style={{ paddingTop: "10px", paddingLeft: "15px" }}
+          style={{
+            paddingTop: "10px",
+            paddingLeft: "15px",
+            opacity: isLoading ? 0 : 1,
+          }}
         />
         <dl style={{ alignItems: "center" }}>
           <dt
             style={{
-              color: primaryLabelColor,
+              color: labelColor,
               fontSize: `${new_fontSize}px`,
               marginRight: "35px",
             }}
@@ -182,12 +184,13 @@ const ChartTreeCompensation = () => {
           </dt>
           <dd
             style={{
-              color: valueLabelColor,
+              color: valueColor,
               fontSize: `${new_valueSize}px`,
               fontWeight: "bold",
               fontFamily: "calibri",
               lineHeight: "1.2",
               margin: "auto",
+              opacity: isLoading ? 0 : 1,
             }}
           >
             {thousands_separators(totaln)}
@@ -200,7 +203,7 @@ const ChartTreeCompensation = () => {
           height: "67vh",
           backgroundColor: "rgb(0,0,0,0)",
           color: "white",
-          // marginBottom: "-1.5vh",
+          opacity: isLoading ? 0 : 1,
         }}
       ></div>
     </>

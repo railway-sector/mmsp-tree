@@ -9,7 +9,7 @@ import "../index.css";
 import TreeCuttingChart from "./ChartTreeCutting";
 import TreeCompensationChart from "./ChartTreeCompensation";
 import { treeCompensationLayer, treeCuttingLayer } from "../layers";
-import { primaryLabelColor } from "../uniqueValues";
+import { labelColor } from "../uniqueValues";
 
 function ChartMain() {
   const [chartTabName, setChartTabName] = useState<any>("TreeCutting");
@@ -31,26 +31,22 @@ function ChartMain() {
         slot="panel-end"
         id="chart-panel"
         style={{
-          "--calcite-panel-heading-text-color": primaryLabelColor,
+          "--calcite-panel-heading-text-color": labelColor,
           borderStyle: "solid",
           borderRightWidth: 5,
           borderLeftWidth: 5,
           borderBottomWidth: 5,
-          // borderTopWidth: 5,
           borderColor: "#555555",
           width: "40%",
-          // width: "100%",
           overflowY: "auto",
           display: "block", // without adding display, background will not disappear.
         }}
       >
         <calcite-tabs
           style={{
-            // borderStyle: "solid",
             borderRightWidth: 1,
             borderLeftWidth: 1,
             borderBottomWidth: 1,
-            // borderTopWidth: 5,
             borderColor: "#555555",
             backgroundColor: "#2b2b2b",
           }}

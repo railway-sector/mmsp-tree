@@ -1,9 +1,11 @@
+import type FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { dateTable } from "./layers";
+import QueryExpressionLayers from "query-layers-expression";
+import Query from "@arcgis/core/rest/support/Query";
 
 //---------------------------------------------//
 //           Pie chart                         //
 //---------------------------------------------//
-// 'piechart' = constant declared from class ChartPieSeries in layers.ts
 interface pieChartDataType {
   piechart: any;
   qChart: any;
@@ -13,6 +15,7 @@ interface pieChartDataType {
   statisticField: any;
   statisticType: "sum" | "count";
 }
+
 export async function pieChartData({
   piechart,
   qChart,
@@ -22,48 +25,100 @@ export async function pieChartData({
   statisticField,
   statisticType,
 }: pieChartDataType) {
-  piechart.qChart = qChart.queryExpression();
-  piechart.layer = layer;
-  piechart.statusList = statusList;
-  piechart.statusField = statusField;
-  piechart.statisticField = statisticField;
-  piechart.statisticType = statisticType;
-
+  // piechart.layer = layer, .....
+  Object.assign(piechart, {
+    qChart: qChart.queryExpression(),
+    layer,
+    statusList,
+    statusField,
+    statisticField,
+    statisticType,
+  });
   return await piechart.chartDataPieSeries();
 }
 
-// Updat date
-export async function dateUpdate() {
-  const monthList = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+//--- Chart Render helper function
+// `pieChartRender` function helps to assign parameter names to class `ChartPieSeriesRender`
+interface PieChartRenderType {
+  render: any | null; // the first instance of new ChartPieSeriesRender
+  chart: any; // amChart
+  pieSeries: any;
+  legend: any;
+  root: any;
+  qChart: any;
+  q2Expression?: any;
+  status_field: any;
+  view: any;
+  updateChartPanelwidth: any;
+  data: any;
+  seriesScale: any;
+  innerLabel?: any;
+  innerLabelFontSize?: any;
+  innerValueFontSize?: any;
+  layer: FeatureLayer | any;
+  statusArray: StatusQueryItem[];
+  bkg_color_switch?: boolean;
+  seriesFillHash?: boolean;
+}
 
-  const query = dateTable.createQuery();
-  query.where = "category = 'Trees'";
+interface StatusQueryItem {
+  category: string;
+  value: number | string;
+  color: string;
+}
 
-  return dateTable.queryFeatures(query).then((response: any) => {
-    const stats = response.features;
-    const dates = stats.map((result: any) => {
-      const date = new Date(result.attributes.date);
-      const year = date.getFullYear();
-      const month = monthList[date.getMonth()];
-      const day = date.getDate();
-      console.log(date);
-      const final = year < 1990 ? "" : `${month} ${day}, ${year}`;
-      return final;
-    });
-    return dates;
+export async function PieChartRender({ render, ...props }: PieChartRenderType) {
+  // render.chart = chart, render.legend = legend,....
+  Object.assign(render, props);
+  return await render.chartDataRenderer();
+}
+
+//--- Returns query expression
+export const makeQuery = (
+  qValues: any,
+  qFields: any,
+  qExpression?: string,
+  q2Expression?: string,
+) => {
+  const q = new QueryExpressionLayers();
+  q.qValues = qValues;
+  q.qFields = qFields;
+  if (qExpression) q.qExpression = qExpression;
+  if (q2Expression) q.q2Expression = q2Expression;
+  return q;
+};
+
+//---------------------------------------------------------//
+//                Get as-of-date                           //
+//---------------------------------------------------------//
+export function yearMonthDay(date: Date) {
+  return {
+    year: date?.getFullYear() ?? 0,
+    month: date?.getMonth() + 1,
+    day: date?.getDate(),
+  };
+}
+
+export function toAsofdate(date: Date) {
+  //--- Return displayed date: (as of date)
+  const { year, day } = yearMonthDay(date);
+  const cmonth = date?.toLocaleString("en-US", { month: "long" });
+  return `${cmonth} ${day}, ${year}`;
+}
+
+export async function dateUpdate(category: string) {
+  //--- Only executed during an initial render
+  const query = new Query({
+    where: `category = '${category}'`,
+    outFields: ["project", "category", "date"],
+  });
+
+  const { features } = await dateTable.queryFeatures(query);
+  return features.map(({ attributes }: any) => {
+    const date = new Date(attributes.date);
+    const asofdate = toAsofdate(date);
+
+    return asofdate;
   });
 }
 
@@ -78,37 +133,23 @@ export function thousands_separators(num: any) {
 
 export function zoomToLayer(layer: any, view: any) {
   return layer.queryExtent().then((response: any) => {
-    view
-      ?.goTo(response.extent, {
-        //response.extent
-        //speedFactor: 2,
-      })
-      .catch((error: any) => {
-        if (error.name !== "AbortError") {
-          console.error(error);
-        }
-      });
+    view?.goTo(response.extent, {}).catch((error: any) => {
+      if (error.name !== "AbortError") {
+        console.error(error);
+      }
+    });
   });
 }
 
-export function highlightTrees(layer: any, view: any) {
+export async function highlightTrees(layer: any, view: any) {
   let highlight: any;
-  view.whenLayerView(layer).then((urgentLayerView: any) => {
-    const query = layer.createQuery();
-    layer.queryFeatures(query).then((results: any) => {
-      const length = results.features.length;
-      const objID = [];
-      for (let i = 0; i < length; i++) {
-        const obj = results.features[i].attributes.OBJECTID;
-        objID.push(obj);
-      }
 
-      if (highlight) {
-        highlight.remove();
-      }
-      highlight = urgentLayerView.highlight(objID);
-    });
-  });
+  const lv = await view.whenLayerView(layer);
+  const query = layer.createQuery();
+  const objectIds = await layer.queryObjectIds(query);
+
+  highlight && highlight.remove();
+  highlight = lv.highlight(objectIds);
 }
 
 export function processParams(graphic: any, layerView: any) {

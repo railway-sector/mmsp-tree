@@ -1,20 +1,15 @@
 import { DropdownData } from "./DropdownContext";
 import { dateUpdate } from "../query";
-import { primaryLabelColor } from "../uniqueValues";
-import { dateDisplayKeys } from "../interfaceKeys";
+import { labelColor } from "../uniqueValues";
 import { useQuery } from "@tanstack/react-query";
-import type { DisplayDates } from "../interfaceKeys";
 
 function Header() {
-  const { data } = useQuery<DisplayDates | any>({
-    queryKey: [dateDisplayKeys.selected],
-    queryFn: () => dateUpdate(),
-    select: (response) => {
-      return { asOfDate: response };
-    },
+  const { data } = useQuery<any>({
+    queryKey: ["As_Of_Date"],
+    queryFn: () => dateUpdate("Trees"),
     staleTime: Infinity,
   });
-  const asOfDate = data?.asOfDate || "";
+  const asofdate = data ?? "";
 
   return (
     <>
@@ -52,29 +47,21 @@ function Header() {
           MMSP Tree
         </b>
         <div
-          style={{
-            color: primaryLabelColor,
-            marginTop: "auto",
-            marginLeft: "auto",
-          }}
+          style={{ color: labelColor, marginTop: "auto", marginLeft: "auto" }}
         >
-          {!asOfDate ? "" : "As of " + asOfDate}
+          {!asofdate ? "" : "As of " + asofdate}
         </div>
+
         {/* Segmented List component */}
         <div
           style={{
             marginBottom: "auto",
             marginTop: "auto",
             marginLeft: "auto",
-            // marginRight: "40px",
             display: "flex",
           }}
         >
-          <div
-            style={{
-              marginRight: "100px",
-            }}
-          >
+          <div style={{ marginRight: "300px" }}>
             <DropdownData />
           </div>
           <img

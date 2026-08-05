@@ -1,18 +1,25 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { useEffect, useRef, useState } from "react";
-import { piechart_cut, queryc, treeCuttingLayer } from "../layers";
-import { pieChartData, thousands_separators, zoomToLayer } from "../query";
+import { use, useEffect, useRef, useState } from "react";
+import { treeCuttingLayer } from "../layers";
+import {
+  makeQuery,
+  pieChartData,
+  PieChartRender,
+  thousands_separators,
+  zoomToLayer,
+} from "../query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 import {
-  primaryLabelColor,
-  treeCuttingTypes,
-  treeCuttinStatusField,
-  valueLabelColor,
+  cp_f,
+  labelColor,
+  station_f,
+  treec_status_f,
+  valueColor,
+  treec_status_q,
 } from "../uniqueValues";
 import { queryDefinitionExpression } from "../queryExpression";
-import { chartRenderer } from "../chartRenderer";
 import {
   chartSetter,
   legendSetter,
@@ -20,42 +27,35 @@ import {
   seriesSetter,
 } from "../chartSetter";
 import { useQuery } from "@tanstack/react-query";
-import {
-  locationKeys,
-  type ChartResponse,
-  type SelectedLocation,
-} from "../interfaceKeys";
+import { type ChartResponse } from "../interfaceKeys";
+import { MyContext } from "../contexts/MyContext";
+import ChartPieSeriesRender from "chart-pie-series-render";
+import ChartPieSeries from "chart-pie-series";
 
 const ChartTreeCutting = () => {
+  const { cpackage, station } = use(MyContext);
   const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
-  //--- 1. Location state
-  const { data: selectedLocation } = useQuery<SelectedLocation | any>({
-    queryKey: locationKeys.selected,
-    queryFn: async () => ({}),
-    staleTime: Infinity,
-  });
-  const cpackage = selectedLocation?.cpackage;
-  const station = selectedLocation?.station;
+  //--- Common qValues and qFields for QueryExpressionLayers class
+  const qV = [cpackage === "All" ? undefined : cpackage, station];
+  const queryc = makeQuery(qV, [cp_f, station_f]);
 
-  const { data } = useQuery<ChartResponse | any>({
-    queryKey: [cpackage, station, treeCuttinStatusField, treeCuttingLayer],
+  const { data, isLoading } = useQuery<ChartResponse | any>({
+    queryKey: [cpackage, station, treec_status_f, treeCuttingLayer],
     queryFn: async () => {
-      queryc.qValues = [cpackage === "All" ? undefined : cpackage, station];
-
       queryDefinitionExpression({
         queryExpression: queryc.queryExpression(),
         featureLayer: [treeCuttingLayer],
       });
 
       const chartData = await pieChartData({
-        piechart: piechart_cut,
+        piechart: new ChartPieSeries(),
         qChart: queryc,
         layer: treeCuttingLayer,
-        statusList: treeCuttingTypes,
-        statusField: treeCuttinStatusField,
-        statisticField: treeCuttinStatusField,
+        statusList: treec_status_q,
+        statusField: treec_status_f,
+        statisticField: treec_status_f,
         statisticType: "count",
       });
 
@@ -80,9 +80,9 @@ const ChartTreeCutting = () => {
 
   const new_fontSize = chartPanelwidth / 22.3;
   const new_valueSize = new_fontSize * 1.55;
-  const new_imageSize = chartPanelwidth * 0.04;
+  const new_imageSize = chartPanelwidth * 0.03;
   const new_pieSeriesScale = 220;
-  const new_pieInnerValueFontSize = "1.1rem";
+  const new_pieInnerValueFontSize = "0.8rem";
   const new_pieInnerLabelFontSize = "0.45em";
 
   useEffect(() => {
@@ -109,28 +109,31 @@ const ChartTreeCutting = () => {
       centerX: 50,
       x: 50,
       y: 65,
-      // scale: 1.03,
     });
     legendRef.current = legend;
     legend.data.setAll(pieSeries.dataItems);
 
     // Render chart
-    chartRenderer({
-      chart: chart,
+    PieChartRender({
+      render: new ChartPieSeriesRender(),
+      chart,
       pieSeries: pieSeries,
-      legend: legend,
-      root: root,
+      legend,
+      root,
       qChart: queryc,
-      status_field: treeCuttinStatusField,
-      arcgisScene: arcgisMap,
+      q2Expression: undefined,
+      status_field: treec_status_f,
+      view: arcgisMap?.view,
       updateChartPanelwidth: setChartPanelwidth,
       data: chartData,
-      pieSeriesScale: new_pieSeriesScale,
-      pieInnerLabel: undefined,
-      pieInnerLabelFontSize: new_pieInnerLabelFontSize,
-      pieInnerValueFontSize: new_pieInnerValueFontSize,
+      seriesScale: new_pieSeriesScale,
+      innerLabel: "TREES",
+      innerLabelFontSize: new_pieInnerLabelFontSize,
+      innerValueFontSize: new_pieInnerValueFontSize,
       layer: treeCuttingLayer,
-      statusArray: treeCuttingTypes,
+      statusArray: treec_status_q,
+      bkg_color_switch: false,
+      seriesFillHash: undefined,
     });
 
     pieSeries.appear(1000, 100);
@@ -162,12 +165,16 @@ const ChartTreeCutting = () => {
           alt="Land Logo"
           height={`${new_imageSize}%`}
           width={`${new_imageSize}%`}
-          style={{ paddingTop: "10px", paddingLeft: "15px" }}
+          style={{
+            paddingTop: "10px",
+            paddingLeft: "15px",
+            opacity: isLoading ? 0 : 1,
+          }}
         />
         <dl style={{ alignItems: "center" }}>
           <dt
             style={{
-              color: primaryLabelColor,
+              color: labelColor,
               fontSize: `${new_fontSize}px`,
               marginRight: "35px",
             }}
@@ -176,12 +183,13 @@ const ChartTreeCutting = () => {
           </dt>
           <dd
             style={{
-              color: valueLabelColor,
+              color: valueColor,
               fontSize: `${new_valueSize}px`,
               fontWeight: "bold",
               fontFamily: "calibri",
               lineHeight: "1.2",
               margin: "auto",
+              opacity: isLoading ? 0 : 1,
             }}
           >
             {thousands_separators(totaln)}
@@ -194,7 +202,7 @@ const ChartTreeCutting = () => {
           height: "65vh",
           backgroundColor: "rgb(0,0,0,0)",
           color: "white",
-          // marginBottom: "-1.5vh",
+          opacity: isLoading ? 0 : 1,
         }}
       ></div>
     </>
