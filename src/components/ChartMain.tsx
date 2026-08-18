@@ -10,18 +10,22 @@ import TreeCuttingChart from "./ChartTreeCutting";
 import TreeCompensationChart from "./ChartTreeCompensation";
 import { treeCompensationLayer, treeCuttingLayer } from "../layers";
 import { labelColor } from "../uniqueValues";
+import type FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 
 function ChartMain() {
   const [chartTabName, setChartTabName] = useState<any>("TreeCutting");
 
   useEffect(() => {
-    if (chartTabName === "TreeCutting") {
-      treeCuttingLayer.visible = true;
-      treeCompensationLayer.visible = false;
-    } else if (chartTabName === "Compensation") {
-      treeCuttingLayer.visible = false;
-      treeCompensationLayer.visible = true;
-    }
+    const layersByTab: Record<string, FeatureLayer> = {
+      TreeCutting: treeCuttingLayer,
+      Compensation: treeCompensationLayer,
+    };
+
+    const activeLayer = layersByTab[chartTabName];
+
+    Object.values(layersByTab).forEach((layer) => {
+      layer.visible = layer === activeLayer;
+    });
   }, [chartTabName]);
 
   return (
@@ -38,8 +42,8 @@ function ChartMain() {
           borderBottomWidth: 5,
           borderColor: "#555555",
           width: "40%",
-          overflowY: "auto",
-          display: "block", // without adding display, background will not disappear.
+          overflow: "hidden",
+          display: "block",
         }}
       >
         <calcite-tabs

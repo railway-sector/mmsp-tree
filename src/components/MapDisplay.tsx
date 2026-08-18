@@ -23,9 +23,9 @@ function MapDisplay() {
   const [_mapView, setMapView] = useState<any>();
 
   arcgisMap?.viewOnReady(() => {
-    arcgisMap?.map?.add(alignmentGroupLayer);
     arcgisMap?.map?.add(lotLayer);
     arcgisMap?.map?.add(treeGroupLayer);
+    arcgisMap?.map?.add(alignmentGroupLayer);
     arcgisMap.hideAttribution = true;
 
     const sources: any = [

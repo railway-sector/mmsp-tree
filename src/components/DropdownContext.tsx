@@ -1,8 +1,8 @@
 import { use, useMemo, useState } from "react";
 import Select from "react-select";
 import "../index.css";
+import GenerateDropdownData from "dropdown-pkg-arcgis";
 import { treeCuttingLayer } from "../layers";
-import GenerateDropdownData from "npm-dropdown-package";
 import { MyContext } from "../contexts/MyContext";
 import { useQuery } from "@tanstack/react-query";
 
@@ -19,7 +19,7 @@ const theme = {
 };
 
 const customStyles = {
-  container: (s: any) => ({ ...s, width: "180px" }),
+  container: (s: any) => ({ ...s, width: "200px" }),
   control: (s: any, { isDisabled, isFocused }: any) => ({
     ...s,
     backgroundColor: isDisabled ? theme.bgDisabled : theme.bg,
@@ -64,10 +64,11 @@ const customStyles = {
   }),
 };
 
-export function DropdownData() {
+export default function DropdownData() {
   const { updateCpackage, updateStation } = use(MyContext);
-  const [cpackageSelected, setCpackageSelected] = useState<null | any>(null);
-  const [stationSelected, setStationSelected] = useState<null | any>(null);
+
+  const [cpSelected, setCpSelected] = useState<null | any>(null);
+  const [stationSelected, setstationSelected] = useState<null | any>(null);
 
   const { data: cpackageList } = useQuery<any>({
     queryKey: ["dropdownData"], // Do not add lotLayer as a dependency. The dropdown list will not be updated properly.
@@ -84,20 +85,21 @@ export function DropdownData() {
     refetchOnReconnect: false,
   });
 
-  const stationList = useMemo(
-    () => cpackageSelected?.field2 ?? [],
-    [cpackageSelected],
-  );
+  //--- Avoid returning empty objects when the component is re-rendered.
+  const stationList = useMemo(() => cpSelected?.field2 ?? [], [cpSelected]);
 
-  const handleContractPackageChange = (obj: any) => {
+  //--- Update contract package
+  const handleCpackageChange = (obj: any) => {
     updateCpackage(obj?.field1 ?? null);
-    setCpackageSelected(obj);
-    setStationSelected(null);
+    updateStation(null);
+    setCpSelected(obj);
+    setstationSelected(null);
   };
 
-  const handleStationChange = (obj: any) => {
+  //--- Update Land Type
+  const handleLandtypeChange = (obj: any) => {
     updateStation(obj?.name ?? null);
-    setStationSelected(obj);
+    setstationSelected(obj);
   };
 
   return (
@@ -105,16 +107,17 @@ export function DropdownData() {
       style={{
         display: "flex",
         flexDirection: "row",
-        // margin: "auto",
+        margin: "auto",
+        gap: "7px",
+        marginRight: "15%",
         marginTop: "5px",
-        gap: "12px",
       }}
     >
       <Select
         placeholder="Select CP"
-        value={cpackageSelected}
+        value={cpSelected}
         options={cpackageList && cpackageList}
-        onChange={handleContractPackageChange}
+        onChange={handleCpackageChange}
         getOptionLabel={(x: any) => x.field1}
         isClearable
         styles={customStyles}
@@ -124,7 +127,7 @@ export function DropdownData() {
         placeholder="Select Station"
         value={stationSelected}
         options={stationList && stationList}
-        onChange={handleStationChange}
+        onChange={handleLandtypeChange}
         getOptionLabel={(x: any) => x.name}
         isClearable
         styles={customStyles}

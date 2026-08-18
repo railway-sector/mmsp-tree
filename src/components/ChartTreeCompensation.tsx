@@ -1,23 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { use, useEffect, useRef, useState } from "react";
 import { treeCompensationLayer } from "../layers";
-import {
-  makeQuery,
-  pieChartData,
-  PieChartRender,
-  thousands_separators,
-  zoomToLayer,
-} from "../query";
+import { fieldStatistic, thousands_separators, zoomToLayer } from "../query";
 import "@arcgis/map-components/dist/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-map";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
 import {
-  labelColor,
-  valueColor,
   cp_f,
-  station_f,
-  treem_status_q,
+  labelColor,
+  stationField,
   treem_status_f,
+  treem_status_q,
+  valueColor,
 } from "../uniqueValues";
 import { queryDefinitionExpression } from "../queryExpression";
 import {
@@ -28,50 +22,59 @@ import {
 } from "../chartSetter";
 import { useQuery } from "@tanstack/react-query";
 import { type ChartResponse } from "../interfaceKeys";
-import { MyContext } from "../contexts/MyContext";
-import ChartPieSeries from "chart-pie-series";
 import ChartPieSeriesRender from "chart-pie-series-render";
+import ChartPieSeries from "chart-pie-series";
+import QueryExpressionLayers from "query-layers-expression";
+import { MyContext } from "../contexts/MyContext";
 
-const ChartTreeCompensation = () => {
-  const { cpackage, station } = use(MyContext);
-  const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
-  const [chartPanelwidth, setChartPanelwidth] = useState<any>();
-
-  //--- Common qValues and qFields for QueryExpressionLayers class
-  const qV = [cpackage === "All" ? undefined : cpackage, station];
-  const queryc3 = makeQuery(qV, [cp_f, station_f]);
-
-  const { data, isLoading } = useQuery<ChartResponse | any>({
-    queryKey: [cpackage, station, treem_status_f, treeCompensationLayer],
+//--------------------------//
+//      useTreeData         //
+//--------------------------//
+function useTreeData(cpackage: any, station: any, query: any) {
+  return useQuery<ChartResponse | any>({
+    queryKey: [cpackage, treem_status_q, station, treeCompensationLayer],
     queryFn: async () => {
       queryDefinitionExpression({
-        queryExpression: queryc3.queryExpression(),
+        queryExpression: query.queryExpression(),
         featureLayer: [treeCompensationLayer],
       });
 
-      const chartData = await pieChartData({
-        piechart: new ChartPieSeries(),
-        qChart: queryc3,
+      const baseArgs = {
         layer: treeCompensationLayer,
-        statusList: treem_status_q,
-        statusField: treem_status_f,
-        statisticField: treem_status_f,
-        statisticType: "count",
-      });
-
-      zoomToLayer(treeCompensationLayer, arcgisMap?.view);
-
-      return {
-        chartData: chartData[0] || [],
-        totaln: chartData[1] || 0,
+        statisticField: "OBJECTID",
+        statisticType: "count" as const,
       };
+
+      const [chartData, totalNumber] = await Promise.all([
+        new ChartPieSeries({
+          ...baseArgs,
+          where: `${query.queryExpression()} AND ${treem_status_f} >= 1`,
+          statusList: treem_status_q,
+          statusField: treem_status_f,
+        }).pieSeries(),
+
+        fieldStatistic({ ...baseArgs, where: query.queryExpression() }),
+      ]);
+
+      return { chartData, totalNumber };
     },
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    staleTime: Infinity,
   });
+}
+
+const ChartTreeCompensation = () => {
+  const { cpackage, station } = use(MyContext);
+  const [chartPanelwidth, setChartPanelwidth] = useState<any>();
+  const arcgisMap: any = document.querySelector("arcgis-map") as ArcgisMap;
+
+  const q1 = new QueryExpressionLayers({
+    qFields: [cp_f, stationField],
+    qValues: [cpackage === "All" ? undefined : cpackage, station],
+  });
+
+  const { data, isLoading } = useTreeData(cpackage, station, q1);
   const chartData = data?.chartData || [];
-  const totaln = data?.totaln || 0;
+  const totalNumber = data?.totalNumber || 0;
 
   const pieSeriesRef = useRef<unknown | any | undefined>({});
   const legendRef = useRef<unknown | any | undefined>({});
@@ -80,17 +83,26 @@ const ChartTreeCompensation = () => {
 
   const new_fontSize = chartPanelwidth / 22.3;
   const new_valueSize = new_fontSize * 1.55;
-  const new_imageSize = chartPanelwidth * 0.03;
+  const new_imageSize = chartPanelwidth * 0.035;
   const new_pieSeriesScale = 220;
-  const new_pieInnerValueFontSize = "0.7rem";
+  const new_pieInnerValueFontSize = "1.1rem";
   const new_pieInnerLabelFontSize = "0.45em";
 
+  const zoomFiltersRef = useRef(`${cpackage}-${station}`);
+
   useEffect(() => {
+    const currentZoomFilters = `${cpackage}-${station}`;
+
+    if (currentZoomFilters !== zoomFiltersRef.current) {
+      zoomFiltersRef.current = currentZoomFilters;
+      zoomToLayer(treeCompensationLayer, arcgisMap?.view);
+    }
+
     const root = rootSetter({ chartID: chartID });
+    root.setThemes([]);
     const chart = chartSetter({ root: root, centerY: 25, y: 10 });
     chartRef.current = chart;
 
-    // Create series
     const pieSeries = seriesSetter({
       chart: chart,
       root: root,
@@ -115,13 +127,12 @@ const ChartTreeCompensation = () => {
     legend.data.setAll(pieSeries.dataItems);
 
     // Render chart
-    PieChartRender({
-      render: new ChartPieSeriesRender(),
+    new ChartPieSeriesRender({
       chart,
       pieSeries: pieSeries,
       legend,
       root,
-      qChart: queryc3,
+      qChart: q1,
       q2Expression: undefined,
       status_field: treem_status_f,
       view: arcgisMap?.view,
@@ -135,9 +146,7 @@ const ChartTreeCompensation = () => {
       statusArray: treem_status_q,
       bkg_color_switch: false,
       seriesFillHash: undefined,
-    });
-
-    pieSeries.appear(1000, 100);
+    }).chartDataRenderer();
 
     return () => {
       root.dispose();
@@ -166,11 +175,7 @@ const ChartTreeCompensation = () => {
           alt="Land Logo"
           height={`${new_imageSize}%`}
           width={`${new_imageSize}%`}
-          style={{
-            paddingTop: "10px",
-            paddingLeft: "15px",
-            opacity: isLoading ? 0 : 1,
-          }}
+          style={{ paddingTop: "10px", paddingLeft: "15px" }}
         />
         <dl style={{ alignItems: "center" }}>
           <dt
@@ -193,7 +198,7 @@ const ChartTreeCompensation = () => {
               opacity: isLoading ? 0 : 1,
             }}
           >
-            {thousands_separators(totaln)}
+            {thousands_separators(totalNumber)}
           </dd>
         </dl>
       </div>
@@ -208,6 +213,6 @@ const ChartTreeCompensation = () => {
       ></div>
     </>
   );
-}; // End of lotChartgs
+};
 
 export default ChartTreeCompensation;

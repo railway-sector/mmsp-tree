@@ -14,9 +14,23 @@ import type { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-ma
 
 function ActionPanel() {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
+  const shellPanel: any = document.getElementById("left-shell-panel");
+
   const [activeWidget, setActiveWidget] = useState<any>(null);
   const [nextWidget, setNextWidget] = useState<any>(null);
-  const shellPanel: any = document.getElementById("left-shell-panel");
+
+  //--- Render only when selected
+  const [hasOpenedBasemaps, setHasOpenedBasemaps] = useState(false);
+  useEffect(() => {
+    if (nextWidget === "basemaps") setHasOpenedBasemaps(true);
+  }, [nextWidget]);
+
+  //--- Click action handler function for active & next widget
+  const handleActionClick = (event: any) => {
+    const id = event.target.id;
+    setNextWidget(id);
+    setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
+  };
 
   useEffect(() => {
     if (activeWidget) {
@@ -60,11 +74,7 @@ function ActionPanel() {
             icon="layers"
             text="layers"
             id="layers"
-            //textEnabled={true}
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
+            onClick={handleActionClick}
           ></calcite-action>
 
           <calcite-action
@@ -72,10 +82,7 @@ function ActionPanel() {
             icon="basemap"
             text="basemaps"
             id="basemaps"
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
+            onClick={handleActionClick}
           ></calcite-action>
 
           <calcite-action
@@ -83,10 +90,7 @@ function ActionPanel() {
             icon="information"
             text="Information"
             id="information"
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
+            onClick={handleActionClick}
           ></calcite-action>
         </calcite-action-bar>
 
@@ -95,7 +99,6 @@ function ActionPanel() {
             referenceElement="arcgis-map"
             selectionMode="multiple"
             visibilityAppearance="checkbox"
-            // show-collapse-button
             show-filter
             filter-placeholder="Filter layers"
             listItemCreatedFunction={defineActions}
@@ -104,14 +107,16 @@ function ActionPanel() {
               if (id === "full-extent-commemo-trees") {
                 zoomToLayer(commemorativeTreeLayer, arcgisMap);
               } else if (id === "highlight-commemo-trees") {
-                highlightTrees(commemorativeTreeLayer, arcgisMap);
+                highlightTrees(commemorativeTreeLayer, arcgisMap?.view);
               }
             }}
           ></arcgis-layer-list>
         </calcite-panel>
 
         <calcite-panel heading="Basemaps" data-panel-id="basemaps" hidden>
-          <arcgis-basemap-gallery referenceElement="arcgis-map"></arcgis-basemap-gallery>
+          {hasOpenedBasemaps ? (
+            <arcgis-basemap-gallery referenceElement="arcgis-map"></arcgis-basemap-gallery>
+          ) : null}{" "}
         </calcite-panel>
 
         <calcite-panel heading="Description" data-panel-id="information" hidden>

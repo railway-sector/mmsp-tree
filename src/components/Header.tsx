@@ -1,7 +1,7 @@
-import { DropdownData } from "./DropdownContext";
 import { dateUpdate } from "../query";
 import { labelColor } from "../uniqueValues";
 import { useQuery } from "@tanstack/react-query";
+import DropdownData from "./DropdownContext";
 
 function Header() {
   const { data } = useQuery<any>({
@@ -29,7 +29,7 @@ function Header() {
         }}
       >
         <img
-          src="https://EijiGorilla.github.io/Symbols/Projec_Logo/DOTr_Logo_v2.png"
+          src="https://EijiGorilla.github.io/Symbols/Projec_Logo/DOTr_Logo_v2.svg"
           alt="DOTr Logo"
           height={"55px"}
           width={"55px"}
@@ -47,21 +47,29 @@ function Header() {
           MMSP Tree
         </b>
         <div
-          style={{ color: labelColor, marginTop: "auto", marginLeft: "auto" }}
+          style={{
+            color: labelColor,
+            marginTop: "auto",
+            marginLeft: "auto",
+          }}
         >
           {!asofdate ? "" : "As of " + asofdate}
         </div>
-
         {/* Segmented List component */}
         <div
           style={{
             marginBottom: "auto",
             marginTop: "auto",
             marginLeft: "auto",
+            // marginRight: "40px",
             display: "flex",
           }}
         >
-          <div style={{ marginRight: "300px" }}>
+          <div
+            style={{
+              marginRight: "100px",
+            }}
+          >
             <DropdownData />
           </div>
           <img
