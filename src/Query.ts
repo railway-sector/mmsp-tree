@@ -1,113 +1,120 @@
-import Query from "@arcgis/core/rest/support/Query";
-import { dateTable } from "./layers";
 import StatisticDefinition from "@arcgis/core/rest/support/StatisticDefinition";
+import Query from "@arcgis/core/rest/support/Query";
 
-//--- Separate calculation
-interface FieldStatisticType {
-  where: any;
-  layer: any;
-  statisticField: any;
-  statisticType: "count" | "sum";
+// Builds a base Query — where-clause comes from the caller
+// (QueryExpressionLayers), this just wires it up to run
+function createQuery(where?: string) {
+  const query = new Query();
+  query.where = where ?? "1=1";
+  query.outFields = [];
+  query.returnGeometry = false;
+  return query;
 }
+
+type StatisticType =
+  | "count"
+  | "sum"
+  | "min"
+  | "max"
+  | "avg"
+  | "stddev"
+  | "var"
+  | "exceedslimit"
+  | "percentile-continuous"
+  | "percentile-discrete"
+  | "envelope-aggregate"
+  | "convex-hull-aggregate";
+
+// ----------------------------------------------------
+// FIELD STATISTIC
+// One number for a single stat (total, public, handed-over, etc).
+// Fire several in parallel via Promise.all for a chart's summary row.
+// ----------------------------------------------------
+
+type FieldStatisticArgs = {
+  where?: string;
+  layer: any;
+  statisticField: string;
+  statisticType: StatisticType;
+};
 
 export async function fieldStatistic({
   where,
   layer,
   statisticField,
   statisticType,
-}: FieldStatisticType) {
-  //--- Query
-  const query = new Query({
-    where: where,
-    outStatistics: [
-      new StatisticDefinition({
-        onStatisticField: statisticField,
-        outStatisticFieldName: "statsCollect",
-        statisticType,
-      }),
-    ],
-  });
+}: FieldStatisticArgs): Promise<number> {
+  const query = createQuery(where);
+  const OUT_FIELD = "result";
 
-  const response = await layer?.queryFeatures(query);
-  return response.features[0].attributes.statsCollect;
+  query.outStatistics = [
+    new StatisticDefinition({
+      onStatisticField: statisticField,
+      outStatisticFieldName: OUT_FIELD,
+      statisticType,
+    }),
+  ];
+
+  const response = await layer.queryFeatures(query);
+  return response.features[0]?.attributes[OUT_FIELD] ?? 0;
 }
 
-//---------------------------------------------------------//
-//                Get as-of-date                           //
-//---------------------------------------------------------//
-export function yearMonthDay(date: Date) {
-  return {
-    year: date?.getFullYear() ?? 0,
-    month: date?.getMonth() + 1,
-    day: date?.getDate(),
-  };
-}
+// ----------------------------------------------------
+// PIE CHART STATUS DATA
+// Per-status breakdown for a pie chart. `where` must already include
+// any caller-side filtering. `code` is string | number so this serves
+// both numeric (lotStatuses) and text-based (isfStatuses) status lists.
+// ----------------------------------------------------
 
-export function toAsofdate(date: Date) {
-  //--- Return displayed date: (as of date)
-  const { year, day } = yearMonthDay(date);
-  const cmonth = date?.toLocaleString("en-US", { month: "long" });
-  return `${cmonth} ${day}, ${year}`;
-}
+type PieChartStatusDataArgs = {
+  where?: string;
+  layer: any;
+  statusList: { code: string | number; label: string; color: string }[];
+  statusField: string;
+  statisticField: string;
+  statisticType: StatisticType;
+};
 
-export async function dateUpdate(category: string) {
-  //--- Only executed during an initial render
-  const query = new Query({
-    where: `project = 'MMSP' AND category = '${category}'`,
-    outFields: ["project", "category", "date"],
-  });
+export async function pieChartStatusData({
+  where,
+  layer,
+  statusList,
+  statusField,
+  statisticField,
+  statisticType,
+}: PieChartStatusDataArgs) {
+  const statusQuery = createQuery(where);
+  statusQuery.outFields = [statusField];
+  statusQuery.outStatistics = [
+    new StatisticDefinition({
+      onStatisticField: statisticField,
+      outStatisticFieldName: "total_status",
+      statisticType,
+    }),
+  ];
+  statusQuery.groupByFieldsForStatistics = [statusField];
+  statusQuery.orderByFields = [statusField];
 
-  const { features } = await dateTable.queryFeatures(query);
-  return features.map(({ attributes }: any) => {
-    const asofdate = toAsofdate(new Date(attributes.date));
+  const statusResponse = await layer.queryFeatures(statusQuery);
 
-    return asofdate;
-  });
-}
+  // Attaches each status's color from statusList, so the chart can bind
+  // slice fill + click handling directly
+  return statusList.map(
+    ({
+      code,
+      label,
+      color,
+    }): { category: string; value: number; color: string; code: string | number } => {
+      const feature = statusResponse.features.find(
+        (f: any) => f.attributes[statusField] === code,
+      );
 
-//---------------------------------------------//
-//           Other functions                   //
-//---------------------------------------------//
-export function thousands_separators(num: any) {
-  if (num) {
-    const num_parts = num.toString().split(".");
-    num_parts[0] = num_parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return num_parts.join(".");
-  }
-}
-
-export function zoomToLayer(layer: any, view: any) {
-  return layer.queryExtent().then((response: any) => {
-    view?.goTo(response.extent, {}).catch((error: any) => {
-      if (error.name !== "AbortError") console.error(error);
-    });
-  });
-}
-
-export async function highlightTrees(layer: any, view: any) {
-  let highlight: any;
-
-  if (!view || !layer) return;
-
-  const lv = await view?.whenLayerView(layer);
-  const query = layer.createQuery();
-  const objectIds = await layer.queryObjectIds(query);
-
-  highlight && highlight.remove();
-  highlight = lv.highlight(objectIds);
-
-  view.on("click", () => {
-    lv.filter = null;
-    highlight && highlight.remove();
-  });
-}
-
-export function processParams(graphic: any, layerView: any) {
-  if (!graphic || !layerView) {
-    throw new Error("Graphic or layerView not provided.");
-  }
-
-  if (!graphic.isAggregate) {
-    throw new Error("Graphic must represent a cluster.");
-  }
+      return {
+        category: label,
+        value: feature?.attributes.total_status ?? 0,
+        color,
+        code,
+      };
+    },
+  );
 }

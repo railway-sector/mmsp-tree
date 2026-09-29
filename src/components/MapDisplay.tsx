@@ -1,66 +1,60 @@
 import "../index.css";
-import "@arcgis/map-components/dist/components/arcgis-map";
+
+import "@arcgis/map-components/components/arcgis-compass";
 import "@arcgis/map-components/components/arcgis-map";
-import "@arcgis/map-components/components/arcgis-zoom";
-import "@arcgis/map-components/components/arcgis-legend";
-import "@arcgis/map-components/components/arcgis-basemap-gallery";
-import "@arcgis/map-components/components/arcgis-layer-list";
-import "@arcgis/map-components/components/arcgis-expand";
-import "@arcgis/map-components/components/arcgis-search";
-import {
-  treeGroupLayer,
-  alignmentGroupLayer,
-  lotLayer,
-  treeCuttingLayer,
-} from "../layers";
+
+import { useEffect, useRef } from "react";
+
 import type { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
-import type { ArcgisSearch } from "@arcgis/map-components/components/arcgis-search/customElement";
-import { useState } from "react";
+import type MapView from "@arcgis/core/views/MapView";
 
-function MapDisplay() {
-  const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
-  const arcgisSearch = document.querySelector("arcgis-search") as ArcgisSearch;
-  const [_mapView, setMapView] = useState<any>();
+import {
+  lotLayer,
+  boundaryGroupLayer,
+  treeGroupLayer,
+} from "../layers";
 
-  arcgisMap?.viewOnReady(() => {
-    arcgisMap?.map?.add(lotLayer);
-    arcgisMap?.map?.add(treeGroupLayer);
-    arcgisMap?.map?.add(alignmentGroupLayer);
-    arcgisMap.hideAttribution = true;
+// call goTo() directly, without threading the view through context.
+export const mapView: { current: MapView | null } = { current: null };
 
-    const sources: any = [
-      {
-        layer: treeCuttingLayer,
-        searchFields: ["ID"],
-        displayField: "ID",
-        exactMatch: false,
-        outFields: ["ID"],
-        name: "Tree ID",
-        zoomScale: 1000,
-        placeholder: "example: DP-T-1",
-      },
-    ];
-    arcgisSearch.allPlaceholder = "example: DP-T-1";
-    arcgisSearch.includeDefaultSourcesDisabled = true;
-    arcgisSearch.locationDisabled = true;
-    arcgisSearch?.sources.push(...sources);
-  });
+export default function MapDisplay() {
+  const mapRef = useRef<ArcgisMap | null>(null);
+  const viewRef = useRef<MapView | null>(null);
+
+  // ----------------------------------------------------
+  // EFFECT 1: One-time map setup.
+  // ----------------------------------------------------
+  useEffect(() => {
+    const initializeMap = async () => {
+      if (!mapRef.current) return;
+
+      await mapRef.current.viewOnReady();
+
+      viewRef.current = mapRef.current.view;
+
+      if (!viewRef.current) return;
+
+      // Publish the view so Chart can drive goTo() themselves.
+      mapView.current = viewRef.current;
+
+      viewRef.current.map?.add(lotLayer);
+      viewRef.current.map?.add(boundaryGroupLayer);
+      viewRef.current.map?.add(treeGroupLayer);
+    };
+
+    initializeMap();
+  }, []);
 
   return (
     <arcgis-map
-      // item-id="5ba14f5a7db34710897da0ce2d46d55f"
-      basemap="dark-gray-vector"
-      zoom={14}
-      center="121.0194387, 14.6972616"
-      onarcgisViewReadyChange={(event: any) => {
-        setMapView(event.target.id);
-      }}
+      id="mmsp-map"
+      ref={mapRef}
+      basemap="topo-vector"
+      ground="world-elevation"
+      center="121.0414, 14.6150"
+      zoom={12}
     >
-      <arcgis-expand close-on-esc slot="top-right" mode="floating">
-        <arcgis-search></arcgis-search>
-      </arcgis-expand>
+      <arcgis-compass slot="top-right" />
     </arcgis-map>
   );
 }
-
-export default MapDisplay;

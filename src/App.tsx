@@ -1,67 +1,51 @@
-import { useState, useEffect, useCallback } from "react";
 import "./index.css";
-import "@arcgis/map-components/dist/components/arcgis-map";
-import "@arcgis/map-components/components/arcgis-map";
-import "@arcgis/map-components/components/arcgis-zoom";
-import "@arcgis/map-components/components/arcgis-legend";
-import "@esri/calcite-components/dist/components/calcite-shell";
-import MapDisplay from "./components/MapDisplay";
-import ActionPanel from "./components/ActionPanel";
-import Header from "./components/Header";
-import MainChart from "./components/ChartMain";
-import { authenticate } from "./autho";
+import "@esri/calcite-components/components/calcite-shell";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MyContext } from "./contexts/MyContext";
 
-//--- Create a client
-const queryClient = new QueryClient();
+import { authenticate } from "./autho";
 
-export function App(): React.JSX.Element {
-  //-------------------------------//
-  //     Viewer Authentication     //
-  //-------------------------------//
+// Components
+import Header from "./components/Header";
+import MapDisplay from "./components/MapDisplay";
+import SidePanel from "./components/SidePanel";
+import ActionBar from "./components/ActionBar";
+
+// Contexts
+import { MyContextProvider } from "./contexts/MyContext";
+
+// Created once outside the component so it's never recreated on re-renders
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // ArcGIS data doesn't change that frequently
+      staleTime: 1000 * 60 * 5,    // cache stays fresh for 5 minutes
+    },
+  },
+});
+
+export default function App() {
+  //------------------------
+  //  Authenticate viewers
+  //------------------------
   const [loggedInState, setLoggedInState] = useState<boolean>(false);
+
   useEffect(() => {
     authenticate(setLoggedInState, "jU5UPrnUJtfGz40F");
   }, []);
 
-  //-------------------------------//
-  //        Create Context         //
-  //-------------------------------//
-  const [cpackage, setCpackage] = useState<any>();
-  const updateCpackage = useCallback((newcp: any) => {
-    setCpackage(newcp);
-  }, []);
-
-  const [station, setStation] = useState<any>();
-  const updateStation = useCallback((newstation: any) => {
-    setStation(newstation);
-  }, []);
-
   return (
-    <>
-      {loggedInState === true && (
-        <calcite-shell
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "#888 #555",
-            "--calcite-color-background": "#2b2b2b",
-          }}
-        >
-          <MyContext
-            value={{ cpackage, updateCpackage, station, updateStation }}
-          >
-            <QueryClientProvider client={queryClient}>
-              <ActionPanel />
+    loggedInState && (
+      <calcite-shell>
+        <MyContextProvider>
+          <QueryClientProvider client={queryClient}>
+            <Header />
               <MapDisplay />
-              <MainChart />
-              <Header />
-            </QueryClientProvider>
-          </MyContext>
-        </calcite-shell>
-      )}
-    </>
+              <ActionBar />
+              <SidePanel />
+          </QueryClientProvider>
+        </MyContextProvider>
+      </calcite-shell>
+    )
   );
 }
-
-export default App;
