@@ -1,0 +1,1 @@
+import{gs as s,gt as l,gu as o,dA as c}from"./index-CzQoSh5b.js";function g({level:n,class:e,...t},i){const r=a(n);return s(`h${r}`,{...t,"aria-level":String(r),class:l(o.heading,e),role:"heading"},i)}function a(n){return c(Math.ceil(n),1,6)}function f(n,e=1){return a(n+e)}export{g as i,f as l};
