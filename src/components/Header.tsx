@@ -51,7 +51,7 @@ export default function Header() {
         await DateTable.load();
 
         const result = await DateTable.queryFeatures({
-          where: "category = 'Land Acquisition HL'",
+          where: "category = 'Trees'",
           outFields: ["date"],
           num: 1,
         });
