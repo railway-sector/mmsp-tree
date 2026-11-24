@@ -1,0 +1,1 @@
+import{W as s,R as p}from"./ProjectionTransformation-B5hjzxzv.js";import"./index-nhhhBuaX.js";import"./Envelope2D-CcxT5Gya.js";import"./MultiPathImpl-NJgEb9J6.js";class x extends s{getOperatorType(){return 6}execute(r,e,t,o){return p(r,e,t,16,o)}}export{x as OperatorCrosses};

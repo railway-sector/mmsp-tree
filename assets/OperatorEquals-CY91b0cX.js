@@ -1,0 +1,1 @@
+import{W as p,R as a}from"./ProjectionTransformation-B5hjzxzv.js";import"./index-nhhhBuaX.js";import"./Envelope2D-CcxT5Gya.js";import"./MultiPathImpl-NJgEb9J6.js";class l extends p{getOperatorType(){return 2}execute(r,e,t,o){return a(r,e,t,3,o)}}export{l as OperatorEquals};
